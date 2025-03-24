@@ -128,13 +128,27 @@ render_htmltools <- function(x) {
   q <- htmltools::tagQuery(x)
 
   if(!length(q$closest("html")$selectedTags()))
-    return(htmltools::doRenderTags(x))
+    return(htmltools::renderTags(x)$html)
+  
+  html_attr <- if(!length(x$attribs)){
+    ""
+  } else {
+    attribs_vals <- unlist(x$attribs)
+    attribs_vals <- gsub(
+      "=NA\\b", "", paste0(names(attribs_vals), "=", attribs_vals, collapse = " ")
+    )
+  }
 
   deps <- htmltools::resolveDependencies(
     dependencies = htmltools::findDependencies(x)
   )
 
   inline_deps <- inline_dependencies(deps)
+
+  # add <body> if not present
+  if(!length(q$find("body")$selectedTags())){
+    q$closest("html")$empty()$append(htmltools::tags$body(x$children))
+  }
 
   # add <head> if not present
   if(!length(q$find("head")$selectedTags()))
@@ -146,16 +160,27 @@ render_htmltools <- function(x) {
   href_deps <- grep("http", strsplit(rendered_deps, "\n")[[1]], value = TRUE)
   href_deps <- paste0(href_deps, collapse = "\n")
 
-  # add encoding and dependencies
-  q$closest("html")$find("head")$append(htmltools::tags$meta(charset = "UTF-8"))
-  q$closest("html")$find("head")$append(htmltools::HTML(href_deps))
-  q$closest("html")$find("head")$append(inline_deps)
+  # add encoding and dependencies just one time
+  q$closest("html")$find("head")$filter(\(x,i)i==1)$append(htmltools::tags$meta(charset = "UTF-8"))
+  q$closest("html")$find("head")$filter(\(x,i)i==1)$append(htmltools::HTML(href_deps))
+  q$closest("html")$find("head")$filter(\(x,i)i==1)$append(inline_deps)
 
   # get all tags and render
   x <- q$allTags()
-  rendered <- htmltools::doRenderTags(x)
-
-  paste0("<!DOCTYPE html>\n", rendered)
+  rendered <- htmltools::renderTags(x)
+  idx_body <- Position(\(s)s$name=="body", x$children)
+  paste0(
+    c(
+      "<!DOCTYPE html>",
+      sprintf("<html %s>", html_attr),
+      "<head>",
+      rendered$head,
+      "</head>",
+      as.character(x$children[[idx_body]]), 
+      "</html>"
+    ),
+    collapse = "\n"
+  )
 }
 
 #' @export
