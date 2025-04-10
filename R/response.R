@@ -157,16 +157,13 @@ render_htmltools <- function(x) {
   q$closest("html")$find("head")$filter(function(x,i)i==1)$append(inline_deps)
 
   # add placeholder for head tags
-  q$closest("html")$prepend(htmltools::HTML("<!--HEAD_CONTENT-->"))
+  q$closest("html")$prepend(htmltools::HTML("<head>\n<!--HEAD_CONTENT-->\n</head>"))
   # get all tags and render
   x <- q$allTags()
   rendered <- htmltools::renderTags(x)
 
-  htmltools::HTML(
-    paste0(c("<!DOCTYPE html>",
-    sub("<!--HEAD_CONTENT-->", paste0(c("<head>", rendered$head, "</head>"),collapse = "\n"), htmltools::HTML(rendered$html))), collapse = "\n")
-  )
 
+paste0("<!DOCTYPE html>\n",sub("<!--HEAD_CONTENT-->",rendered$head, rendered$html, fixed = TRUE))
 }
 
 #' @export
