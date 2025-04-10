@@ -163,6 +163,7 @@ render_htmltools <- function(x) {
   rendered <- htmltools::renderTags(x)
 
   paste0("<!DOCTYPE html>\n",sub("<!--HEAD_CONTENT-->",rendered$head, rendered$html, fixed = TRUE))
+  
 }
 
 #' @export
