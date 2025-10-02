@@ -116,7 +116,17 @@ inline_dependencies <- function(deps) {
         return()
       }
 
-      f <- function(file_name, type = c("text/css", "application/javascript")) {
+      is_named_list <- function(list) {
+        is.list(list) && length(names(list)) > 0
+      }
+
+      to_dep_list <- function(vector) {
+        list(
+          src = vector
+        )
+      }
+
+      f <- function(item, type = c("text/css", "application/javascript")) {
         type <- match.arg(arg = type)
         tag <- switch(
           EXPR = type,
@@ -125,21 +135,52 @@ inline_dependencies <- function(deps) {
         )
 
         content <- paste0(
-          read_lines(file.path(dep$src$file, file_name)),
+          read_lines(file.path(dep$src$file, item$src)),
           collapse = "\n"
         )
-
-        tag(type = type, htmltools::HTML(content))
+        item$src <- NULL
+        attributes <- append(item, list(type = type))
+        element <- tag(htmltools::HTML(content))
+        element$attribs <- attributes
+        element
       }
 
+      stylesheets <- lapply(X = dep$stylesheet, FUN = to_dep_list)
+      styles <- lapply(X = stylesheets, FUN = f, type = "text/css")
+
+      if (is.character(dep$script)) {
+        scripts <- lapply(dep$script, FUN = to_dep_list)
+        scripts <- lapply(
+          X = scripts,
+          FUN = f,
+          type = "application/javascript"
+        )
+        return(list(scripts, styles))
+      }
+
+      if (is_named_list(dep$script)) {
+        scripts <- list(dep$script)
+        scripts <- lapply(
+          X = scripts,
+          FUN = f,
+          type = "application/javascript"
+        )
+        return(list(scripts, styles))
+      }
+
+      scripts <- lapply(dep$script, function(s) {
+        if (is.character(s)) {
+          return(to_dep_list(s))
+        }
+        s
+      })
+
       scripts <- lapply(
-        X = dep$script,
+        X = scripts,
         FUN = f,
         type = "application/javascript"
       )
-      styles <- lapply(X = dep$stylesheet, FUN = f, type = "text/css")
-
-      list(scripts, styles)
+      return(list(scripts, styles))
     }
   )
 }
