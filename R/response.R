@@ -120,10 +120,12 @@ inline_dependencies <- function(deps) {
         is.list(list) && length(names(list)) > 0
       }
 
-      to_dep_list <- function(vector) {
-        list(
-          src = vector
-        )
+      to_dep_list <- function(char) {
+        l <- list()
+        for (i in seq_along(char)) {
+          l[[i]] <- list(src = char[[i]])
+        }
+        l
       }
 
       f <- function(item, type = c("text/css", "application/javascript")) {
@@ -145,17 +147,32 @@ inline_dependencies <- function(deps) {
         element
       }
 
-      stylesheets <- lapply(X = dep$stylesheet, FUN = to_dep_list)
+      meta <- htmltools::HTML(paste0(
+        sprintf(
+          '<meta name="%s" content ="%s"/>',
+          names(dep$meta),
+          htmltools::htmlEscape(dep$meta)
+        ),
+        collapse = "\n"
+      ))
+
+      head <- htmltools::HTML(dep$head)
+
+      stylesheets <- to_dep_list(dep$stylesheet)
       styles <- lapply(X = stylesheets, FUN = f, type = "text/css")
 
+      if (length(dep$stylesheet) > 0 && !length(dep$script)) {
+        return(list(meta, head, styles))
+      }
+
       if (is.character(dep$script)) {
-        scripts <- lapply(dep$script, FUN = to_dep_list)
+        scripts <- to_dep_list(dep$script)
         scripts <- lapply(
           X = scripts,
           FUN = f,
           type = "application/javascript"
         )
-        return(list(scripts, styles))
+        return(list(meta, head, styles, scripts))
       }
 
       if (is_named_list(dep$script)) {
@@ -165,7 +182,7 @@ inline_dependencies <- function(deps) {
           FUN = f,
           type = "application/javascript"
         )
-        return(list(scripts, styles))
+        return(list(meta, head, styles, scripts))
       }
 
       scripts <- lapply(dep$script, function(s) {
@@ -180,7 +197,7 @@ inline_dependencies <- function(deps) {
         FUN = f,
         type = "application/javascript"
       )
-      return(list(scripts, styles))
+      list(meta, head, styles, scripts)
     }
   )
 }
