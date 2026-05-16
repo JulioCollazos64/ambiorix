@@ -649,22 +649,6 @@ Response <- R6::R6Class(
       assert_that(not_missing(name))
       assert_that(not_missing(value))
 
-      if (length(.globals$cookiePreprocessors) > 0) {
-        for (i in seq_along(.globals$cookiePreprocessors)) {
-          value <- .globals$cookiePreprocessors[[i]](
-            name,
-            value,
-            expires,
-            max_age,
-            domain,
-            path,
-            secure,
-            http_only,
-            same_site
-          )
-        }
-      }
-
       private$.cookies[[name]] <- cookie(
         name,
         value,

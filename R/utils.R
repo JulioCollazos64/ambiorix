@@ -26,25 +26,6 @@ browse_ambiorix <- function(open, url) {
   invisible()
 }
 
-`%response%` <- function(lhs, rhs) {
-  if (is.null(lhs)) {
-    return(rhs)
-  }
-  if (!inherits(lhs, "ambiorixResponse")) {
-    return(rhs)
-  }
-
-  lhs
-}
-
-`%error%` <- function(lhs, rhs) {
-  if (is.null(lhs)) {
-    return(rhs)
-  }
-
-  lhs
-}
-
 #' Remove Extensions
 #'
 #' Remove extensions from files.

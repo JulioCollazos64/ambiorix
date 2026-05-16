@@ -1,6 +1,6 @@
 Package: ambiorix
 Title: Web Framework Inspired by 'Express.js'
-Version: 3.0.0
+Version: 4.0.0
 Authors@R: 
   c(
     person(given = "John",
@@ -21,7 +21,6 @@ LazyData: false
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
-    log,
     cli,
     glue,
     httpuv,
@@ -30,7 +29,8 @@ Imports:
     webutils (>= 1.2.0),
     yyjsonr (>= 0.1.20),
     mime (>= 0.13),
-    promises (>= 1.5.0)
+    promises (>= 1.5.0),
+    routing
 Suggests:
     readr,
     readxl,

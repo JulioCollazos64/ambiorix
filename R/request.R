@@ -203,45 +203,6 @@ Request <- R6::R6Class(
   )
 )
 
-#' Set Parameters
-#'
-#' Set the query's parameters.
-#'
-#' @param path Corresponds the requests' `PATH_INFO`
-#' @param route See `Route`
-#'
-#' @return Parameter list
-#' @keywords internal
-#' @noRd
-set_params <- function(path, route = NULL) {
-  if (is.null(route)) {
-    return(list())
-  }
-
-  if (!route$dynamic) {
-    return(list())
-  }
-
-  path_split <- strsplit(path, "/")[[1]]
-  path_split <- path_split[path_split != ""]
-
-  nms <- c()
-  pms <- list()
-  for (i in seq_along(path_split)) {
-    if (i > length(route$components)) {
-      break
-    }
-
-    if (route$components[[i]]$dynamic) {
-      nms <- c(nms, route$components[[i]]$name)
-      pms <- append(pms, utils::URLdecode(path_split[i]))
-    }
-  }
-
-  names(pms) <- nms
-  return(pms)
-}
-
 #' Mock Request
 #'
 #' Mock a request, used for tests.

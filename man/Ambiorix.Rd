@@ -41,57 +41,6 @@ if(interactive())
  app$start()
 
 ## ------------------------------------------------
-## Method `Ambiorix$set_404`
-## ------------------------------------------------
-
-app <- Ambiorix$new()
-
-app$set_404(function(req, res){
- res$send("Nothing found here")
-})
-
-app$get("/", function(req, res){
- res$send("Using {ambiorix}!")
-})
-
-if(interactive())
- app$start()
-
-## ------------------------------------------------
-## Method `Ambiorix$set_error`
-## ------------------------------------------------
-
-# my custom error handler:
-error_handler <- function(req, res, error) {
-  if (!is.null(error)) {
-    error_msg <- conditionMessage(error)
-    cli::cli_alert_danger("Error: {error_msg}")
-  }
-  response <- list(
-    code = 500L,
-    msg = "Uhhmmm... Looks like there's an error from our side :("
-  )
-  res$
-    set_status(500L)$
-    json(response)
-}
-
-# handler for GET at /whoami:
-whoami <- function(req, res) {
-  # simulate error (object 'Pikachu' is not defined)
-  print(Pikachu)
-}
-
-app <- Ambiorix$
-  new()$
-  set_error(error_handler)$
-  get("/whoami", whoami)
-
-if (interactive()) {
-  app$start(open = FALSE)
-}
-
-## ------------------------------------------------
 ## Method `Ambiorix$start`
 ## ------------------------------------------------
 
@@ -120,17 +69,33 @@ app$get("/", function(req, res){
 
 if(interactive())
  app$start()
+
+## ------------------------------------------------
+## Method `Ambiorix$receive`
+## ------------------------------------------------
+
+app <- Ambiorix$new()
+
+app$get("/", function(req, res){
+ res$send("Using {ambiorix}!")
+})
+
+app$receive("hello", function(msg, ws){
+ print(msg) # print msg received
+
+ # send a message back
+ ws$send("hello", "Hello back! (sent from R)")
+})
+
+if(interactive())
+ app$start()
 }
 \section{Super class}{
-\code{\link[ambiorix:Routing]{ambiorix::Routing}} -> \code{Ambiorix}
+\code{\link[routing:Router]{routing::Router}} -> \code{Ambiorix}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{not_found}}{404 Response, must be a handler function that accepts the request and the response, by default uses \code{\link[=response_404]{response_404()}}.}
-
-\item{\code{error}}{500 response when the route errors, must a handler function that accepts the request and the response, by default uses \code{\link[=response_500]{response_500()}}.}
-
 \item{\code{on_stop}}{Callback function to run when the app stops, takes no argument.}
 }
 \if{html}{\out{</div>}}
@@ -152,28 +117,22 @@ if(interactive())
 \item \href{#method-Ambiorix-new}{\code{Ambiorix$new()}}
 \item \href{#method-Ambiorix-cache_templates}{\code{Ambiorix$cache_templates()}}
 \item \href{#method-Ambiorix-listen}{\code{Ambiorix$listen()}}
-\item \href{#method-Ambiorix-set_404}{\code{Ambiorix$set_404()}}
-\item \href{#method-Ambiorix-set_error}{\code{Ambiorix$set_error()}}
-\item \href{#method-Ambiorix-static}{\code{Ambiorix$static()}}
 \item \href{#method-Ambiorix-start}{\code{Ambiorix$start()}}
 \item \href{#method-Ambiorix-serialiser}{\code{Ambiorix$serialiser()}}
 \item \href{#method-Ambiorix-stop}{\code{Ambiorix$stop()}}
-\item \href{#method-Ambiorix-print}{\code{Ambiorix$print()}}
+\item \href{#method-Ambiorix-receive}{\code{Ambiorix$receive()}}
 \item \href{#method-Ambiorix-clone}{\code{Ambiorix$clone()}}
 }
 }
 \if{html}{\out{
 <details><summary>Inherited methods</summary>
 <ul>
-<li><span class="pkg-link" data-pkg="ambiorix" data-topic="Routing" data-id="engine"><a href='../../ambiorix/html/Routing.html#method-Routing-engine'><code>ambiorix::Routing$engine()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="ambiorix" data-topic="Routing" data-id="get_middleware"><a href='../../ambiorix/html/Routing.html#method-Routing-get_middleware'><code>ambiorix::Routing$get_middleware()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="ambiorix" data-topic="Routing" data-id="get_params"><a href='../../ambiorix/html/Routing.html#method-Routing-get_params'><code>ambiorix::Routing$get_params()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="ambiorix" data-topic="Routing" data-id="get_receivers"><a href='../../ambiorix/html/Routing.html#method-Routing-get_receivers'><code>ambiorix::Routing$get_receivers()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="ambiorix" data-topic="Routing" data-id="get_routes"><a href='../../ambiorix/html/Routing.html#method-Routing-get_routes'><code>ambiorix::Routing$get_routes()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="ambiorix" data-topic="Routing" data-id="param"><a href='../../ambiorix/html/Routing.html#method-Routing-param'><code>ambiorix::Routing$param()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="ambiorix" data-topic="Routing" data-id="prepare"><a href='../../ambiorix/html/Routing.html#method-Routing-prepare'><code>ambiorix::Routing$prepare()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="ambiorix" data-topic="Routing" data-id="receive"><a href='../../ambiorix/html/Routing.html#method-Routing-receive'><code>ambiorix::Routing$receive()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="ambiorix" data-topic="Routing" data-id="use"><a href='../../ambiorix/html/Routing.html#method-Routing-use'><code>ambiorix::Routing$use()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="routing" data-topic="Router" data-id="getStack"><a href='../../routing/html/Router.html#method-Router-getStack'><code>routing::Router$getStack()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="routing" data-topic="Router" data-id="handle"><a href='../../routing/html/Router.html#method-Router-handle'><code>routing::Router$handle()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="routing" data-topic="Router" data-id="param"><a href='../../routing/html/Router.html#method-Router-param'><code>routing::Router$param()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="routing" data-topic="Router" data-id="route"><a href='../../routing/html/Router.html#method-Router-route'><code>routing::Router$route()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="routing" data-topic="Router" data-id="static"><a href='../../routing/html/Router.html#method-Router-static'><code>routing::Router$static()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="routing" data-topic="Router" data-id="use"><a href='../../routing/html/Router.html#method-Router-use'><code>routing::Router$use()</code></a></span></li>
 </ul>
 </details>
 }}
@@ -185,7 +144,7 @@ if(interactive())
 \if{html}{\out{<div class="r">}}\preformatted{Ambiorix$new(
   host = getOption("ambiorix.host", "0.0.0.0"),
   port = getOption("ambiorix.port", NULL),
-  log = getOption("ambiorix.logger", TRUE)
+  ...
 )}\if{html}{\out{</div>}}
 }
 
@@ -195,8 +154,6 @@ if(interactive())
 \item{\code{host}}{A string defining the host.}
 
 \item{\code{port}}{Integer defining the port, defaults to \code{ambiorix.port} option: uses a random port if \code{NULL}.}
-
-\item{\code{log}}{Whether to generate a log of events.}
 }
 \if{html}{\out{</div>}}
 }
@@ -253,124 +210,6 @@ if(interactive())
 }
 \if{html}{\out{</div>}}
 
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Ambiorix-set_404"></a>}}
-\if{latex}{\out{\hypertarget{method-Ambiorix-set_404}{}}}
-\subsection{Method \code{set_404()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Ambiorix$set_404(handler)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{handler}}{Function that accepts the request and returns an object
-describing an httpuv response, e.g.: \code{\link[=response]{response()}}.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Details}{
-Sets the 404 page.
-}
-
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{app <- Ambiorix$new()
-
-app$set_404(function(req, res){
- res$send("Nothing found here")
-})
-
-app$get("/", function(req, res){
- res$send("Using {ambiorix}!")
-})
-
-if(interactive())
- app$start()
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Ambiorix-set_error"></a>}}
-\if{latex}{\out{\hypertarget{method-Ambiorix-set_error}{}}}
-\subsection{Method \code{set_error()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Ambiorix$set_error(handler)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{handler}}{Function that accepts a request, response and an error object.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Details}{
-Sets the error handler.
-}
-
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{# my custom error handler:
-error_handler <- function(req, res, error) {
-  if (!is.null(error)) {
-    error_msg <- conditionMessage(error)
-    cli::cli_alert_danger("Error: {error_msg}")
-  }
-  response <- list(
-    code = 500L,
-    msg = "Uhhmmm... Looks like there's an error from our side :("
-  )
-  res$
-    set_status(500L)$
-    json(response)
-}
-
-# handler for GET at /whoami:
-whoami <- function(req, res) {
-  # simulate error (object 'Pikachu' is not defined)
-  print(Pikachu)
-}
-
-app <- Ambiorix$
-  new()$
-  set_error(error_handler)$
-  get("/whoami", whoami)
-
-if (interactive()) {
-  app$start(open = FALSE)
-}
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Ambiorix-static"></a>}}
-\if{latex}{\out{\hypertarget{method-Ambiorix-static}{}}}
-\subsection{Method \code{static()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Ambiorix$static(path, uri = "www")}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{path}}{Local path to directory of assets.}
-
-\item{\code{uri}}{URL path where the directory will be available.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Details}{
-Static directories
 }
 
 }
@@ -469,15 +308,46 @@ Stop the webserver.
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Ambiorix-print"></a>}}
-\if{latex}{\out{\hypertarget{method-Ambiorix-print}{}}}
-\subsection{Method \code{print()}}{
+\if{html}{\out{<a id="method-Ambiorix-receive"></a>}}
+\if{latex}{\out{\hypertarget{method-Ambiorix-receive}{}}}
+\subsection{Method \code{receive()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Ambiorix$print()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Ambiorix$receive(name, handler)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{name}}{Name of message.}
+
+\item{\code{handler}}{Function to run when message is received.}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Details}{
-Print
+Receive Websocket Message
+}
+
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{app <- Ambiorix$new()
+
+app$get("/", function(req, res){
+ res$send("Using {ambiorix}!")
+})
+
+app$receive("hello", function(msg, ws){
+ print(msg) # print msg received
+
+ # send a message back
+ ws$send("hello", "Hello back! (sent from R)")
+})
+
+if(interactive())
+ app$start()
+}
+\if{html}{\out{</div>}}
+
 }
 
 }

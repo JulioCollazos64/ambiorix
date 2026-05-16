@@ -13,22 +13,11 @@ test_that("Ambiorix", {
   # set
   app <- Ambiorix$new(
     port = 8080L,
-    host = "127.0.0.1",
-    log = FALSE
+    host = "127.0.0.1"
   )
 
-  app$static("www")
   expect_equal(app$port, 8080L)
   expect_equal(app$host, "127.0.0.1")
-
-  expect_error(app$set_404("error"))
-  expect_error(app$set_404(function(req) {}))
-  expect_s3_class(
-    app$set_404(function(req, res) {
-      res$send("Errr")
-    }),
-    "Ambiorix"
-  )
 
   expect_error(app$serialiser("error"))
   expect_s3_class(

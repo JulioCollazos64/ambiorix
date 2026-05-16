@@ -2,8 +2,6 @@
 #'
 #' Web server.
 #'
-#' @field not_found 404 Response, must be a handler function that accepts the request and the response, by default uses [response_404()].
-#' @field error 500 response when the route errors, must a handler function that accepts the request and the response, by default uses [response_500()].
 #' @field on_stop Callback function to run when the app stops, takes no argument.
 #' @field port Port to run the application.
 #' @field host Host to run the application.
@@ -33,40 +31,22 @@
 #' @export
 Ambiorix <- R6::R6Class(
   "Ambiorix",
-  inherit = Routing,
+  inherit = Router,
   public = list(
-    not_found = NULL,
-    error = NULL,
     on_stop = NULL,
     #' @details Define the webserver.
     #'
     #' @param host A string defining the host.
     #' @param port Integer defining the port, defaults to `ambiorix.port` option: uses a random port if `NULL`.
-    #' @param log Whether to generate a log of events.
     initialize = function(
       host = getOption("ambiorix.host", "0.0.0.0"),
       port = getOption("ambiorix.port", NULL),
-      log = getOption("ambiorix.logger", TRUE)
+      ...
     ) {
-      super$initialize()
-      .globals$infoLog$predicate <- logPredicate(log)
-      .globals$errorLog$predicate <- logPredicate(log)
-      .globals$successLog$predicate <- logPredicate(log)
+      super$initialize(...)
 
       private$.host <- host
       private$.port <- get_port(host, port)
-
-      self$not_found <- function(req, res) {
-        response_404()
-      }
-
-      self$error <- function(req, res, error) {
-        message(conditionMessage(error))
-        res$status <- 500L
-        res$send("500: Internal Server Error")
-      }
-
-      invisible(self)
     },
     #' @details Cache templates in memory instead of reading
     #' them from disk.
@@ -91,81 +71,6 @@ Ambiorix <- R6::R6Class(
     listen = function(port) {
       assert_that(not_missing(port))
       private$.port <- as.integer(port)
-      invisible(self)
-    },
-    #' @details Sets the 404 page.
-    #' @param handler Function that accepts the request and returns an object
-    #' describing an httpuv response, e.g.: [response()].
-    #'
-    #' @examples
-    #' app <- Ambiorix$new()
-    #'
-    #' app$set_404(function(req, res){
-    #'  res$send("Nothing found here")
-    #' })
-    #'
-    #' app$get("/", function(req, res){
-    #'  res$send("Using {ambiorix}!")
-    #' })
-    #'
-    #' if(interactive())
-    #'  app$start()
-    set_404 = function(handler) {
-      assert_that(not_missing(handler))
-      assert_that(is_handler(handler))
-      self$not_found <- handler
-      invisible(self)
-    },
-    #' @details Sets the error handler.
-    #' @param handler Function that accepts a request, response and an error object.
-    #'
-    #' @examples
-    #' # my custom error handler:
-    #' error_handler <- function(req, res, error) {
-    #'   if (!is.null(error)) {
-    #'     error_msg <- conditionMessage(error)
-    #'     cli::cli_alert_danger("Error: {error_msg}")
-    #'   }
-    #'   response <- list(
-    #'     code = 500L,
-    #'     msg = "Uhhmmm... Looks like there's an error from our side :("
-    #'   )
-    #'   res$
-    #'     set_status(500L)$
-    #'     json(response)
-    #' }
-    #'
-    #' # handler for GET at /whoami:
-    #' whoami <- function(req, res) {
-    #'   # simulate error (object 'Pikachu' is not defined)
-    #'   print(Pikachu)
-    #' }
-    #'
-    #' app <- Ambiorix$
-    #'   new()$
-    #'   set_error(error_handler)$
-    #'   get("/whoami", whoami)
-    #'
-    #' if (interactive()) {
-    #'   app$start(open = FALSE)
-    #' }
-    set_error = function(handler) {
-      assert_that(not_missing(handler))
-      assert_that(is_error_handler(handler))
-      self$error <- handler
-      invisible(self)
-    },
-    #' @details Static directories
-    #'
-    #' @param path Local path to directory of assets.
-    #' @param uri URL path where the directory will be available.
-    static = function(path, uri = "www") {
-      assert_that(not_missing(uri))
-      assert_that(not_missing(path))
-
-      lst <- list(path)
-      names(lst) <- uri
-      private$.static <- append(private$.static, lst)
       invisible(self)
     },
     #' @details Start
@@ -202,24 +107,17 @@ Ambiorix <- R6::R6Class(
 
       port <- get_port(host, port)
 
-      super$prepare()
-      private$.routes <- super$get_routes()
-
-      if (private$n_routes() == 0L) {
-        stop("No routes specified")
-      }
-
-      private$.receivers <- super$get_receivers()
-      private$.middleware <- super$get_middleware()
-      private$.params <- super$get_params()
-
       private$.server <- httpuv::startServer(
         host = host,
         port = port,
         app = list(
-          call = super$.call,
-          staticPaths = private$.static,
-          onWSOpen = super$websocket,
+          call = function(req) {
+            request <- Request$new(req)
+            res <- Response$new()
+            super$handle(request, res, routing::finalHandler(request, res))
+          },
+          staticPaths = private$statics,
+          onWSOpen = self$websocket,
           staticPathOptions = httpuv::staticPathOptions(
             html_charset = "utf-8",
             headers = list(
@@ -239,8 +137,7 @@ Ambiorix <- R6::R6Class(
             }
 
             if (size > private$.limit) {
-              .globals$errorLog$log("Request size exceeded, see app$limit")
-
+              cli::cli_alert_warning("Request size exceeded, see app$limit")
               return(
                 response(
                   "Maximum upload size exceeded",
@@ -263,7 +160,7 @@ Ambiorix <- R6::R6Class(
 
       browser_url <- sprintf("http://%s:%s", browser_host, port)
 
-      .globals$successLog$log("Listening on", browser_url)
+      cli::cli_alert_success("Listening on {browser_url}")
 
       # runs
       private$.is_running <- TRUE
@@ -306,7 +203,6 @@ Ambiorix <- R6::R6Class(
     #' Stop the webserver.
     stop = function() {
       if (!private$.is_running) {
-        .globals$errorLog$log("Server not running")
         return(invisible())
       }
 
@@ -316,16 +212,38 @@ Ambiorix <- R6::R6Class(
       }
 
       private$.server$stop()
-      .globals$errorLog$log("Server stopped")
-
+      cli::cli_alert_info("Server stopped")
       private$.is_running <- FALSE
 
       invisible(self)
     },
-    #' @details Print
-    print = function() {
-      cli::cli_rule("Ambiorix", right = "web server")
-      cli::cli_li("routes: {.val {private$n_routes()}}")
+    #' @details Receive Websocket Message
+    #' @param name Name of message.
+    #' @param handler Function to run when message is received.
+    #'
+    #' @examples
+    #' app <- Ambiorix$new()
+    #'
+    #' app$get("/", function(req, res){
+    #'  res$send("Using {ambiorix}!")
+    #' })
+    #'
+    #' app$receive("hello", function(msg, ws){
+    #'  print(msg) # print msg received
+    #'
+    #'  # send a message back
+    #'  ws$send("hello", "Hello back! (sent from R)")
+    #' })
+    #'
+    #' if(interactive())
+    #'  app$start()
+    receive = function(name, handler) {
+      private$.receivers <- append(
+        private$.receivers,
+        list(WebsocketHandler$new(name, handler))
+      )
+
+      invisible(self)
     }
   ),
   active = list(
@@ -349,20 +267,50 @@ Ambiorix <- R6::R6Class(
       }
 
       private$.limit <- as.integer(value)
+    },
+    websocket = function(ws) {
+      if (missing(ws) && !is.null(private$.wss_custom)) {
+        return(private$.wss_custom)
+      }
+
+      if (missing(ws) && is.null(private$.wss_custom)) {
+        return(private$.wss)
+      }
+
+      private$.wss_custom <- ws
+      invisible(self)
     }
   ),
   private = list(
+    .wss = function(ws) {
+      .globals$wsc <- append(.globals$wsc, Websocket$new(ws))
+
+      # receive
+      ws$onMessage(function(binary, message) {
+        # don't run if no receiver
+        if (length(private$.receivers) == 0) {
+          return(NULL)
+        }
+
+        message <- yyjsonr::read_json_str(message)
+
+        for (i in seq_along(private$.receivers)) {
+          if (private$.receivers[[i]]$is_handler(message)) {
+            cli::cli_alert_info(
+              "Received websocket message: {.val {message$name}}"
+            )
+            return(private$.receivers[[i]]$receive(message, ws))
+          }
+        }
+      })
+    },
     .host = "0.0.0.0",
     .port = 3000,
     .server = NULL,
-    .static = list(),
     .is_running = FALSE,
     .limit = 5 * 1024 * 1024,
-    n_routes = function() {
-      length(private$.routes) + length(private$.static)
-    },
-    .make_path = function(path) {
-      paste0(private$.basepath, path)
-    }
-  )
+    .receivers = list(),
+    .wss_custom = NULL
+  ),
+  lock_objects = FALSE
 )
