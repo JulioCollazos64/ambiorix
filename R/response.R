@@ -244,6 +244,11 @@ Response <- R6::R6Class(
   "Response",
   lock_objects = FALSE,
   public = list(
+    #' @details Constructor
+    #' @param req A [Request] object.
+    initialize = function(req = NULL) {
+      private$.request <- req
+    },
     #' @details Set the status of the response.
     #' @param status An integer defining the status.
     set_status = function(status) {
@@ -634,6 +639,8 @@ Response <- R6::R6Class(
     #' @param same_site Controls whether or not a cookie is sent with cross-origin
     #' requests, providing some protection against cross-site request forgery
     #' attacks (CSRF). Accepts `Strict`, `Lax`, or `None`.
+    #' @param signed Whether to sign the cookie. Requires a secret, set via the
+    #' `cookie::cookieParser()` middleware.
     #' @return Invisibly returns self.
     cookie = function(
       name,
@@ -644,21 +651,35 @@ Response <- R6::R6Class(
       path = getOption("ambiorix.cookie.path", "/"),
       secure = getOption("ambiorix.cookie.secure", TRUE),
       http_only = getOption("ambiorix.cookie.httponly", TRUE),
-      same_site = getOption("ambiorix.cookie.savesite")
+      same_site = getOption("ambiorix.cookie.savesite"),
+      signed = FALSE
     ) {
       assert_that(not_missing(name))
       assert_that(not_missing(value))
 
-      private$.cookies[[name]] <- cookie(
+      secret <- private$.request$secret
+
+      if (signed && is.null(secret)) {
+        stop(
+          'cookieParser("secret") required for signed cookies',
+          call. = FALSE
+        )
+      }
+
+      if (signed) {
+        value <- paste0('s:', cookie::sign(value, secret))
+      }
+
+      private$.cookies[[name]] <- cookie::serialise(
         name,
         value,
-        expires,
-        max_age,
-        domain,
-        path,
-        secure,
-        http_only,
-        same_site
+        maxAge = max_age,
+        domain = domain,
+        path = path,
+        expires = expires,
+        httpOnly = http_only,
+        secure = secure,
+        sameSite = same_site
       )
 
       invisible(self)
@@ -826,45 +847,11 @@ Response <- R6::R6Class(
         return()
       }
 
-      for (opts in private$.cookies) {
-        cookie <- sprintf("%s=%s", opts$name, opts$value)
-
-        if (!is.null(opts$expires)) {
-          expires <- convert_cookie_expires(opts$expires)
-          cookie <- sprintf("%s; Expires=%s", cookie, expires)
-        }
-
-        if (!is.null(opts$max_age)) {
-          cookie <- sprintf("%s; Max-Age=%s", cookie, opts$max_age)
-        }
-
-        if (!is.null(opts$domain)) {
-          cookie <- sprintf("%s; Domain=%s", cookie, opts$domain)
-        }
-
-        if (!is.null(opts$path)) {
-          cookie <- sprintf("%s; Path=%s", cookie, opts$path)
-        }
-
-        if (opts$secure) {
-          cookie <- sprintf("%s; Secure", cookie)
-        }
-
-        if (opts$http_only) {
-          cookie <- sprintf("%s; HttpOnly", cookie)
-        }
-
-        if (!is.null(opts$same_site)) {
-          cookie <- sprintf("%s; SameSite=%s", cookie, opts$same_site)
-        }
-
-        names(cookie) <- "Set-Cookie"
-
-        private$.headers <- append(
-          private$.headers,
-          as.list(cookie)
-        )
-      }
+      names(private$.cookies) <- rep("Set-Cookie", length(private$.cookies))
+      private$.headers <- append(
+        private$.headers,
+        private$.cookies
+      )
     },
     .send_image = function(file, type = c("png", "jpeg"), clean = FALSE) {
       assert_that(not_missing(file))
@@ -899,44 +886,3 @@ Response <- R6::R6Class(
     }
   )
 )
-
-#' Convert Cookie Expires
-#'
-#' Converts the cookie `expires` argument
-#' to the expected
-#' [Date format](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date).
-#'
-#' @param expires Expiry, if an integer assumes it's the number of seconds
-#' from now. Otherwise accepts an object of class `POSIXct` or `Date`.
-#'
-#' @examples
-#' # expires in an hour
-#' convert_cookie_expires(60 * 60)
-#'
-#' # expires tomorrow
-#' convert_cookie_expires(Sys.Date() + 1)
-#'
-#' # expires in 1 minute
-#' convert_cookie_expires(Sys.time() + 60)
-#'
-#' @noRd
-#' @keywords internal
-convert_cookie_expires <- function(expires) {
-  if (is.character(expires)) {
-    return(expires)
-  }
-
-  if (is.numeric(expires)) {
-    expires <- as.POSIXct(Sys.time(), tz = "UTC") + expires
-  }
-
-  if (inherits(expires, "Date") || inherits(expires, "POSIXct")) {
-    expires <- as.POSIXct(expires, tz = "UTC")
-    expires <- format(
-      expires,
-      "%a, %d %b %Y %H:%M:%S GMT"
-    )
-  }
-
-  expires
-}

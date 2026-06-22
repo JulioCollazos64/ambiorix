@@ -113,7 +113,7 @@ Ambiorix <- R6::R6Class(
         app = list(
           call = function(req) {
             request <- Request$new(req)
-            res <- Response$new()
+            res <- Response$new(request)
             super$handle(request, res, routing::finalHandler(request, res))
           },
           staticPaths = private$statics,

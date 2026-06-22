@@ -35,6 +35,7 @@ if (interactive()) {
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
+\item \href{#method-Response-new}{\code{Response$new()}}
 \item \href{#method-Response-set_status}{\code{Response$set_status()}}
 \item \href{#method-Response-send}{\code{Response$send()}}
 \item \href{#method-Response-sendf}{\code{Response$sendf()}}
@@ -67,6 +68,26 @@ if (interactive()) {
 \item \href{#method-Response-clear_cookie}{\code{Response$clear_cookie()}}
 \item \href{#method-Response-clone}{\code{Response$clone()}}
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Response-new"></a>}}
+\if{latex}{\out{\hypertarget{method-Response-new}{}}}
+\subsection{Method \code{new()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Response$new(req = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{req}}{A \link{Request} object.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Details}{
+Constructor
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Response-set_status"></a>}}
@@ -672,7 +693,8 @@ Invisible returns self.
   path = getOption("ambiorix.cookie.path", "/"),
   secure = getOption("ambiorix.cookie.secure", TRUE),
   http_only = getOption("ambiorix.cookie.httponly", TRUE),
-  same_site = getOption("ambiorix.cookie.savesite")
+  same_site = getOption("ambiorix.cookie.savesite"),
+  signed = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -710,6 +732,9 @@ through the document.cookie property.}
 \item{\code{same_site}}{Controls whether or not a cookie is sent with cross-origin
 requests, providing some protection against cross-site request forgery
 attacks (CSRF). Accepts \code{Strict}, \code{Lax}, or \code{None}.}
+
+\item{\code{signed}}{Whether to sign the cookie. Requires a secret, set via the
+\code{cookie::cookieParser()} middleware.}
 }
 \if{html}{\out{</div>}}
 }

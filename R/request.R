@@ -126,7 +126,6 @@ Request <- R6::R6Class(
       self$body <- req
 
       private$.parse_query_string(req$QUERY_STRING)
-      self$cookie <- .globals$cookieParser(req)
     },
     #' @details Print
     print = function() {
