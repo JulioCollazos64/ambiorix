@@ -107,41 +107,6 @@ construct_response <- function(res) {
   structure(res, class = c(class(res), "ambiorixResponse"))
 }
 
-inline_dependencies <- function(deps) {
-  lapply(
-    X = deps,
-    FUN = function(dep) {
-      if (!length(dep$src) || !length(dep$src$file)) {
-        return()
-      }
-
-      f <- function(file_name, type = c("text/css", "application/javascript")) {
-        type <- match.arg(arg = type)
-        tag <- switch(
-          EXPR = type,
-          "text/css" = htmltools::tags$style,
-          "application/javascript" = htmltools::tags$script
-        )
-
-        content <- paste0(
-          read_lines(file.path(dep$src$file, file_name)),
-          collapse = "\n"
-        )
-
-        tag(type = type, htmltools::HTML(content))
-      }
-
-      scripts <- lapply(
-        X = dep$script,
-        FUN = f,
-        type = "application/javascript"
-      )
-      styles <- lapply(X = dep$stylesheet, FUN = f, type = "text/css")
-
-      list(scripts, styles)
-    }
-  )
-}
 
 render_htmltools <- function(x) {
   # if it has a <html> tag we assume
@@ -157,13 +122,6 @@ render_htmltools <- function(x) {
   deps <- htmltools::resolveDependencies(
     dependencies = htmltools::findDependencies(x)
   )
-  inline_deps <- inline_dependencies(deps)
-
-  # htmltools::renderDependencies(..., srcType = "href")
-  # does not work
-  rendered_deps <- htmltools::renderDependencies(deps)
-  href_deps <- grep("http", strsplit(rendered_deps, "\n")[[1]], value = TRUE)
-  href_deps <- paste0(href_deps, collapse = "\n")
 
   # add <body> if not present, and enclose all children tags within it, <head> tags will
   # be extracted thanks to htmltools::renderTags
@@ -184,10 +142,7 @@ render_htmltools <- function(x) {
     }
   )$prepend(
     htmltools::tags$meta(charset = "UTF-8")
-  )$append(
-    htmltools::HTML(href_deps),
-    inline_deps
-  )
+  )$append()
 
   # add placeholder for head tag children
   q$closest("html")$prepend(htmltools::HTML(
