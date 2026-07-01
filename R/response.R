@@ -107,62 +107,6 @@ construct_response <- function(res) {
   structure(res, class = c(class(res), "ambiorixResponse"))
 }
 
-
-render_htmltools <- function(x) {
-  # if it has a <html> tag we assume
-  # it's a document and render with
-  # dependencies, etc.
-  # otherwise we just render the tags.
-  q <- htmltools::tagQuery(x)
-
-  if (!length(q$closest("html")$selectedTags())) {
-    return(htmltools::renderTags(x)$html)
-  }
-
-  deps <- htmltools::resolveDependencies(
-    dependencies = htmltools::findDependencies(x)
-  )
-
-  # add <body> if not present, and enclose all children tags within it, <head> tags will
-  # be extracted thanks to htmltools::renderTags
-  if (!length(q$find("body")$selectedTags())) {
-    q$closest("html")$empty()$append(htmltools::tags$body(x$children))
-  }
-
-  # add <head> if not present
-  if (!length(q$find("head")$selectedTags())) {
-    q$closest("html")$prepend(htmltools::tags$head())
-  }
-
-  # add encoding and dependencies for the first selected tag this avoid duplicates as
-  # append *appends* for each selected tag
-  q$closest("html")$find("head")$filter(
-    function(x, i) {
-      i == 1
-    }
-  )$prepend(
-    htmltools::tags$meta(charset = "UTF-8")
-  )$append()
-
-  # add placeholder for head tag children
-  q$closest("html")$prepend(htmltools::HTML(
-    "<head>\n<!--HEAD_CONTENT-->\n</head>"
-  ))
-  # get all tags and render
-  x <- q$allTags()
-  rendered <- htmltools::renderTags(x)
-
-  paste0(
-    "<!DOCTYPE html>\n",
-    sub(
-      pattern = "<!--HEAD_CONTENT-->",
-      replacement = rendered$head,
-      x = rendered$html,
-      fixed = TRUE
-    )
-  )
-}
-
 #' @export
 print.ambiorixResponse <- function(x, ...) {
   message("An ambiorix response")
@@ -754,6 +698,60 @@ Response <- R6::R6Class(
 
       # parse R
       private$.run_post_hooks(render_html(file_content), ext)
+    },
+    render_htmltools = function(x) {
+      # if it has a <html> tag we assume
+      # it's a document and render with
+      # dependencies, etc.
+      # otherwise we just render the tags.
+      q <- htmltools::tagQuery(x)
+
+      if (!length(q$closest("html")$selectedTags())) {
+        return(htmltools::renderTags(x)$html)
+      }
+
+      deps <- htmltools::resolveDependencies(
+        dependencies = htmltools::findDependencies(x)
+      )
+
+      # add <body> if not present, and enclose all children tags within it, <head> tags will
+      # be extracted thanks to htmltools::renderTags
+      if (!length(q$find("body")$selectedTags())) {
+        q$closest("html")$empty()$append(htmltools::tags$body(x$children))
+      }
+
+      # add <head> if not present
+      if (!length(q$find("head")$selectedTags())) {
+        q$closest("html")$prepend(htmltools::tags$head())
+      }
+
+      # add encoding and dependencies for the first selected tag this avoid duplicates as
+      # append *appends* for each selected tag
+      q$closest("html")$find("head")$filter(
+        function(x, i) {
+          i == 1
+        }
+      )$prepend(
+        htmltools::tags$meta(charset = "UTF-8")
+      )$append()
+
+      # add placeholder for head tag children
+      q$closest("html")$prepend(htmltools::HTML(
+        "<head>\n<!--HEAD_CONTENT-->\n</head>"
+      ))
+      # get all tags and render
+      x <- q$allTags()
+      rendered <- htmltools::renderTags(x)
+
+      paste0(
+        "<!DOCTYPE html>\n",
+        sub(
+          pattern = "<!--HEAD_CONTENT-->",
+          replacement = rendered$head,
+          x = rendered$html,
+          fixed = TRUE
+        )
+      )
     },
     .get_status = function(status = NULL) {
       if (is.null(status)) {
