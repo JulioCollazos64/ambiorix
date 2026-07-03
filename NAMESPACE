@@ -2,8 +2,6 @@
 
 S3method(convert_body,default)
 S3method(convert_body,factor)
-S3method(convert_body,shiny.tag)
-S3method(convert_body,shiny.tag.list)
 S3method(print,ambiorixResponse)
 S3method(print,jobj)
 S3method(print,renderer)

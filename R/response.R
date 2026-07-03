@@ -89,16 +89,6 @@ convert_body.factor <- function(body) {
   as.character(body)
 }
 
-#' @export
-convert_body.shiny.tag <- function(body) {
-  render_htmltools(body)
-}
-
-#' @export
-convert_body.shiny.tag.list <- function(body) {
-  render_htmltools(body)
-}
-
 #' Construct Response
 #'
 #' @noRd
@@ -158,6 +148,10 @@ Response <- R6::R6Class(
     #' @details Send a plain HTML response.
     #' @param body Body of the response.
     send = function(body) {
+      if (inherits(body, c("shiny.tag", "shiny.tag.list"))) {
+        body <- private$render_htmltools(body)
+      }
+
       response(
         body = body,
         headers = private$.get_headers(),
@@ -714,6 +708,14 @@ Response <- R6::R6Class(
         dependencies = htmltools::findDependencies(x)
       )
 
+      deps <- lapply(
+        deps,
+        FUN = createWebDependency,
+        private$.request$app$.__enclos_env__$private$.server
+      )
+
+      stringifiedDeps <- htmltools::renderDependencies(deps)
+
       # add <body> if not present, and enclose all children tags within it, <head> tags will
       # be extracted thanks to htmltools::renderTags
       if (!length(q$find("body")$selectedTags())) {
@@ -733,7 +735,7 @@ Response <- R6::R6Class(
         }
       )$prepend(
         htmltools::tags$meta(charset = "UTF-8")
-      )$append()
+      )$append(stringifiedDeps)
 
       # add placeholder for head tag children
       q$closest("html")$prepend(htmltools::HTML(
@@ -839,3 +841,30 @@ Response <- R6::R6Class(
     }
   )
 )
+
+#' Create Web Dependency
+#'
+#' Makes an `htmlDependency` object servable by the running
+#' httpuv server. Adapted from `shiny:::createWebDependency`.
+#'
+#' @param dep An [htmltools::htmlDependency()] object.
+#' @param runningServer The running httpuv app.
+#'
+#' @return The `htmlDependency` object, modified when it was file-based:
+#'   `src$href` set to the registered static path prefix and `src$file`
+#'   removed.
+#'
+#' @keywords internal
+#' @noRd
+createWebDependency <- function(dep, runningServer) {
+  if (is.null(dep$src$href)) {
+    prefix <- paste(dep$name, "-", dep$version, sep = "")
+    names(dep$src$file) <- prefix
+    runningServer$setStaticPath(.list = dep$src$file)
+
+    dep$src$file <- NULL
+    dep$src$href <- prefix
+  }
+
+  dep
+}
